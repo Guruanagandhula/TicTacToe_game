@@ -1,0 +1,284 @@
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+public class TicTacToeGUI extends JFrame {
+    private JButton[][] buttons;
+    private char currentPlayer;
+    private JLabel statusLabel;
+
+    public TicTacToeGUI() {
+        initializeUI();
+        initializeGame();
+    }
+    private void initializeUI() {
+        setTitle("Tic Tac Toe");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(300, 300);
+        setLayout(new BorderLayout());
+        getContentPane().setBackground(new Color(173, 216, 230)); 
+        JPanel boardPanel = new JPanel(new GridLayout(3, 3));
+        buttons = new JButton[3][3];
+
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                buttons[i][j] = new JButton();
+                buttons[i][j].setFont(new Font("Arial", Font.PLAIN, 40));
+                buttons[i][j].setFocusPainted(false);
+                buttons[i][j].addActionListener(new ButtonClickListener(i, j));
+                boardPanel.add(buttons[i][j]);
+            }
+        }
+
+        // Status Label
+        statusLabel = new JLabel("Player X's turn", JLabel.CENTER);
+        statusLabel.setFont(new Font("Arial", Font.BOLD, 16));
+
+        // Restart Button
+        JButton restartButton = new JButton("Restart Game");
+        restartButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                initializeGame();
+            }
+        });
+
+        // Add components to the frame
+        add(boardPanel, BorderLayout.CENTER);
+        add(statusLabel, BorderLayout.NORTH);
+        add(restartButton, BorderLayout.SOUTH);
+
+        setLocationRelativeTo(null);
+        setVisible(true);
+    }
+
+    private void initializeGame() {
+        currentPlayer = 'X';
+        statusLabel.setText("Player X's turn");
+
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                buttons[i][j].setText("");
+                buttons[i][j].setEnabled(true);
+            }
+        }
+        if (currentPlayer == 'O') {
+            computerMakeMove();
+        }
+    }
+
+    private class ButtonClickListener implements ActionListener {
+        private int row;
+        private int col;
+
+        public ButtonClickListener(int row, int col) {
+            this.row = row;
+            this.col = col;
+        }
+        public void actionPerformed(ActionEvent e) {
+            if (buttons[row][col].getText().equals("")) {
+                buttons[row][col].setText(String.valueOf(currentPlayer));
+
+                if (checkWin()) {
+                    statusLabel.setText("Player " + currentPlayer + " wins!");
+                    disableButtons();
+                    showGameResultDialog("Congratulations! You won!");
+                } else if (isBoardFull()) {
+                    statusLabel.setText("It's a draw!");
+                    disableButtons();
+                    showGameResultDialog("It's a draw!");
+                } else {
+                    switchPlayer();
+                    statusLabel.setText((currentPlayer == 'X') ? "Player X's turn" : "Computer's turn");
+                    if (currentPlayer == 'O') {
+                        computerMakeMove();
+                    }
+                }
+            }
+        }
+    }
+
+    private boolean checkWin() {
+        for (int i = 0; i < 3; i++) {
+            if (buttons[i][0].getText().equals(String.valueOf(currentPlayer)) &&
+                buttons[i][1].getText().equals(String.valueOf(currentPlayer)) &&
+                buttons[i][2].getText().equals(String.valueOf(currentPlayer))) {
+                return true;
+            }
+        }
+        for (int i = 0; i < 3; i++) {
+            if (buttons[0][i].getText().equals(String.valueOf(currentPlayer)) &&
+                buttons[1][i].getText().equals(String.valueOf(currentPlayer)) &&
+                buttons[2][i].getText().equals(String.valueOf(currentPlayer))) {
+                return true;
+            }
+        }
+        if (buttons[0][0].getText().equals(String.valueOf(currentPlayer)) &&
+            buttons[1][1].getText().equals(String.valueOf(currentPlayer)) &&
+            buttons[2][2].getText().equals(String.valueOf(currentPlayer))) {
+            return true;
+        }
+
+        if (buttons[0][2].getText().equals(String.valueOf(currentPlayer)) &&
+            buttons[1][1].getText().equals(String.valueOf(currentPlayer)) &&
+            buttons[2][0].getText().equals(String.valueOf(currentPlayer))) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private boolean isBoardFull() {
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                if (buttons[i][j].getText().equals("")) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private void switchPlayer() {
+        currentPlayer = (currentPlayer == 'X') ? 'O' : 'X';
+    }
+
+    private void disableButtons() {
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                buttons[i][j].setEnabled(false);
+            }
+        }
+    }
+
+    private void computerMakeMove() {
+        int[] bestMove = minimax(2, 'O'); 
+
+        if (bestMove[0] != -1 && bestMove[1] != -1) {
+            buttons[bestMove[0]][bestMove[1]].setText("O");
+            buttons[bestMove[0]][bestMove[1]].setEnabled(false);
+
+            if (checkWin()) {
+                statusLabel.setText("Computer wins!");
+                disableButtons();
+                showGameResultDialog("Oops! Computer won!");
+            } else if (isBoardFull()) {
+                statusLabel.setText("It's a draw!");
+                disableButtons();
+                showGameResultDialog("It's a draw!");
+            } else {
+                switchPlayer();
+                statusLabel.setText("Player X's turn");
+            }
+        }
+    }
+
+    private int[] minimax(int depth, char player) {
+        int[] bestMove = {-1, -1};
+        int bestScore = (player == 'O') ? Integer.MIN_VALUE : Integer.MAX_VALUE;
+        if (depth == 0 || checkWin() || isBoardFull()) {
+            int score = evaluateBoard();
+            return new int[]{score, -1, -1};
+        }
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                if (buttons[i][j].getText().equals("")) {
+                    buttons[i][j].setText(String.valueOf(player));
+                    buttons[i][j].setEnabled(false);
+
+                    int[] currentMove = minimax(depth - 1, (player == 'X') ? 'O' : 'X');
+
+                    buttons[i][j].setText("");
+                    buttons[i][j].setEnabled(true);
+                    if (player == 'O' && currentMove[0] > bestScore) {
+                        bestScore = currentMove[0];
+                        bestMove[0] = i;
+                        bestMove[1] = j;
+                    } else if (player == 'X' && currentMove[0] < bestScore) {
+                        bestScore = currentMove[0];
+                        bestMove[0] = i;
+                        bestMove[1] = j;
+                    }
+                }
+            }
+        }
+
+        return bestMove;
+    }
+
+    private int evaluateBoard() {
+        int score = 0;
+        for (int i = 0; i < 3; i++) {
+            score += evaluateLine(buttons[i][0].getText(), buttons[i][1].getText(), buttons[i][2].getText());
+        }
+        for (int i = 0; i < 3; i++) {
+            score += evaluateLine(buttons[0][i].getText(), buttons[1][i].getText(), buttons[2][i].getText());
+        }
+        score += evaluateLine(buttons[0][0].getText(), buttons[1][1].getText(), buttons[2][2].getText());
+        score += evaluateLine(buttons[0][2].getText(), buttons[1][1].getText(), buttons[2][0].getText());
+
+        return score;
+    }
+
+    private int evaluateLine(String cell1, String cell2, String cell3) {
+        int score = 0;
+        if (cell1.equals("O")) {
+            score = 1;
+        } else if (cell1.equals("X")) {
+            score = -1;
+        }
+
+        if (cell2.equals("O")) {
+            if (score == 1) {
+                score = 10;
+            } else if (score == -1) {
+                return 0;
+            } else {
+                score = 1;
+            }
+        } else if (cell2.equals("X")) {
+            if (score == -1) {
+                score = -10;
+            } else if (score == 1) {
+                return 0;
+            } else {
+                score = -1;
+            }
+        }
+
+        if (cell3.equals("O")) {
+            if (score > 0) {
+                score *= 10;
+            } else if (score < 0) {
+                return 0;
+            } else {
+                score = 1;
+            }
+        } else if (cell3.equals("X")) {
+            if (score < 0) {
+                score *= 10;
+            } else if (score > 0) {
+                return 0;
+            } else {
+                score = -1;
+            }
+        }
+
+        return score;
+    }
+
+    private void showGameResultDialog(String message) {
+        int choice = JOptionPane.showConfirmDialog(this, message + "\nDo you want to play again?",
+                "Game Over", JOptionPane.YES_NO_OPTION);
+        if (choice == JOptionPane.YES_OPTION) {
+            initializeGame();
+        } else {
+            System.exit(0);
+        }
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new TicTacToeGUI());
+    }
+}
